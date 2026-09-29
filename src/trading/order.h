@@ -10,6 +10,7 @@ enum class Side {
 };
 
 struct Order {
+  std::uint64_t id;
   Side side;
   std::int64_t price;
   std::int64_t quantity;

@@ -4,12 +4,17 @@
 
 namespace matching {
 
-void LimitOrderBook::add_order(const trading::Order& order) {
+std::uint64_t LimitOrderBook::add_order(trading::Order order) {
+  order.id = next_order_id_++;
+  const std::uint64_t order_id = order.id;
+
   if (order.side == trading::Side::Buy) {
-    bids_[order.price].push_back(order);
+    bids_[order.price].push_back(std::move(order));
   } else {
-    asks_[order.price].push_back(order);
+    asks_[order.price].push_back(std::move(order));
   }
+
+  return order_id;
 }
 
 void LimitOrderBook::print() const {
