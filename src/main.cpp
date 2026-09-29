@@ -35,14 +35,34 @@ int main() {
       .quantity = 25,
   });
 
-  std::cout << "Order IDs:\n";
-  std::cout << "  first  = " << first_order_id << '\n';
-  std::cout << "  second = " << second_order_id << '\n';
-  std::cout << "  third  = " << third_order_id << '\n';
-  std::cout << "  fourth = " << fourth_order_id << '\n';
-  std::cout << "  fifth  = " << fifth_order_id << '\n';
-
+  std::cout << "Initial book:\n";
   book.print();
+
+  std::cout << "\nCancel order " << third_order_id << '\n';
+
+  if (book.cancel_order(third_order_id)) {
+    std::cout << "Cancellation succeeded.\n";
+  } else {
+    std::cout << "Order not found.\n";
+  }
+
+  std::cout << "\nBook after cancellation:\n";
+  book.print();
+
+  std::cout << "\nCancel order " << third_order_id << " again:\n";
+
+  if (book.cancel_order(third_order_id)) {
+    std::cout << "Cancellation succeeded.\n";
+  } else {
+    std::cout << "Order not found.\n";
+  }
+
+  // Keep the other IDs alive so it is obvious that they are
+  // still valid orders in the book.
+  (void)first_order_id;
+  (void)second_order_id;
+  (void)fourth_order_id;
+  (void)fifth_order_id;
 
   return 0;
 }
