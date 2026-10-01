@@ -6,7 +6,7 @@
 
 namespace matching {
 
-std::vector<trading::Trade> LimitOrderBook::add_order(trading::Order order) {
+std::vector<trading::Trade> LimitOrderBook::AddOrder(trading::Order order) {
   order.id = next_order_id_++;
   const uint64 order_id = order.id;
 
@@ -115,7 +115,7 @@ std::vector<trading::Trade> LimitOrderBook::add_order(trading::Order order) {
   return trades;
 }
 
-bool32 LimitOrderBook::cancel_order(uint64 order_id) {
+bool32 LimitOrderBook::CancelOrder(uint64 order_id) {
   const auto index_it = order_index_.find(order_id);
 
   if (index_it == order_index_.end()) {
@@ -147,7 +147,7 @@ bool32 LimitOrderBook::cancel_order(uint64 order_id) {
   return true;
 }
 
-void LimitOrderBook::print() const {
+void LimitOrderBook::Print() const {
   std::cout << "----- ORDER BOOK -----\n";
 
   std::cout << "ASKS:\n";

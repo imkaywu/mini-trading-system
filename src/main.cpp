@@ -5,7 +5,7 @@
 #include "trading/order.h"
 #include "trading/trade.h"
 
-void print_trades(const std::vector<trading::Trade>& trades) {
+void PrintTrades(const std::vector<trading::Trade>& trades) {
   for (const auto& trade : trades) {
     std::cout << "Trade: incoming=" << trade.incoming_order_id
               << " resting=" << trade.resting_order_id
@@ -18,7 +18,7 @@ int main() {
   matching::LimitOrderBook book;
 
   // Resting sell order.
-  const auto sell_id = book.add_order({
+  const auto sell_id = book.AddOrder({
       .id = 0,
       .side = trading::Side::Sell,
       .price = 100,
@@ -27,7 +27,7 @@ int main() {
   });
 
   std::cout << "Initial book:\n";
-  book.print();
+  book.Print();
 
   // Partially fills the resting sell order.
   //
@@ -36,7 +36,7 @@ int main() {
   //
   // Result:
   // SELL 100 x 30
-  const auto trades = book.add_order({
+  const auto trades = book.AddOrder({
       .id = 0,
       .side = trading::Side::Buy,
       .price = 100,
@@ -45,11 +45,11 @@ int main() {
   });
 
   std::cout << "\nAfter partial fill:\n";
-  print_trades(trades);
-  book.print();
+  PrintTrades(trades);
+  book.Print();
 
   // This buy order consumes the remaining 30 shares.
-  const auto second_trades = book.add_order({
+  const auto second_trades = book.AddOrder({
       .id = 0,
       .side = trading::Side::Buy,
       .price = 100,
@@ -58,12 +58,12 @@ int main() {
   });
 
   std::cout << "\nAfter consuming the remaining sell:\n";
-  print_trades(second_trades);
-  book.print();
+  PrintTrades(second_trades);
+  book.Print();
 
   // The incoming sell cannot cross the empty book,
   // so it becomes a resting order.
-  const auto resting_sell_id = book.add_order({
+  const auto resting_sell_id = book.AddOrder({
       .id = 0,
       .side = trading::Side::Sell,
       .price = 103,
@@ -79,7 +79,7 @@ int main() {
   // Result:
   // SELL → completely filled
   // BUY  → 20 remaining and becomes a resting bid
-  const auto third_trades = book.add_order({
+  const auto third_trades = book.AddOrder({
       .id = 0,
       .side = trading::Side::Buy,
       .price = 103,
@@ -88,8 +88,8 @@ int main() {
   });
 
   std::cout << "\nAfter partial fill of incoming order:\n";
-  print_trades(third_trades);
-  book.print();
+  PrintTrades(third_trades);
+  book.Print();
 
   // These variables are kept here so the IDs can be inspected
   // while debugging this stage.
