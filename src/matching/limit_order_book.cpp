@@ -10,6 +10,8 @@ std::vector<trading::Trade> LimitOrderBook::add_order(trading::Order order) {
   order.id = next_order_id_++;
   const uint64 order_id = order.id;
 
+  order.timestamp = std::chrono::steady_clock::now();
+
   std::vector<trading::Trade> trades;
 
   if (order.side == trading::Side::Buy) {
@@ -150,28 +152,46 @@ void LimitOrderBook::print() const {
 
   std::cout << "ASKS:\n";
 
-  // asks_ is already sorted from lowest price to highest price.
   for (const auto& [price, orders] : asks_) {
-    uint64 total_quantity = 0;
+    int64 total_quantity = 0;
 
     for (const auto& order : orders) {
+      const auto timestamp =
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              order.timestamp.time_since_epoch())
+              .count();
+
+      std::cout << "  id=" << order.id << " " << price << " x "
+                << order.quantity << " timestamp=" << timestamp << "us\n";
+
       total_quantity += order.quantity;
     }
 
-    std::cout << "  " << price << " x " << total_quantity << "\n";
+    if (orders.size() > 1) {
+      std::cout << "  total: " << price << " x " << total_quantity << '\n';
+    }
   }
 
   std::cout << "BIDS:\n";
 
-  // bids_ is sorted from highest price to lowest price.
   for (const auto& [price, orders] : bids_) {
     int64 total_quantity = 0;
 
     for (const auto& order : orders) {
+      const auto timestamp =
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              order.timestamp.time_since_epoch())
+              .count();
+
+      std::cout << "  id=" << order.id << " " << price << " x "
+                << order.quantity << " timestamp=" << timestamp << "us\n";
+
       total_quantity += order.quantity;
     }
 
-    std::cout << "  " << price << " x " << total_quantity << "\n";
+    if (orders.size() > 1) {
+      std::cout << "  total: " << price << " x " << total_quantity << '\n';
+    }
   }
 
   std::cout << "----------------------\n";

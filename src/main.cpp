@@ -23,6 +23,7 @@ int main() {
       .side = trading::Side::Sell,
       .price = 100,
       .quantity = 50,
+      .timestamp = {},
   });
 
   std::cout << "Initial book:\n";
@@ -40,6 +41,7 @@ int main() {
       .side = trading::Side::Buy,
       .price = 100,
       .quantity = 20,
+      .timestamp = {},
   });
 
   std::cout << "\nAfter partial fill:\n";
@@ -52,6 +54,7 @@ int main() {
       .side = trading::Side::Buy,
       .price = 100,
       .quantity = 40,
+      .timestamp = {},
   });
 
   std::cout << "\nAfter consuming the remaining sell:\n";
@@ -65,6 +68,7 @@ int main() {
       .side = trading::Side::Sell,
       .price = 103,
       .quantity = 30,
+      .timestamp = {},
   });
 
   // This buy crosses the sell at 103 and has quantity left over.
@@ -80,6 +84,7 @@ int main() {
       .side = trading::Side::Buy,
       .price = 103,
       .quantity = 50,
+      .timestamp = {},
   });
 
   std::cout << "\nAfter partial fill of incoming order:\n";
