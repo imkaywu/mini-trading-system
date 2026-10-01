@@ -4,14 +4,9 @@
 
 namespace trading {
 
-enum class Side {
-  Buy,
-  Sell,
-};
-
-struct Order {
-  uint64 id;
-  Side side;
+struct Trade {
+  uint64 incoming_order_id;
+  uint64 resting_order_id;
   int64 price;
   int64 quantity;
 };
