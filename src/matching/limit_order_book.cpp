@@ -6,6 +6,12 @@
 
 namespace matching {
 
+LimitOrderBook::LimitOrderBook(usize expected_order_count) {
+  if (expected_order_count > 0) {
+    order_index_.reserve(expected_order_count);
+  }
+}
+
 std::vector<trading::Trade> LimitOrderBook::AddOrder(trading::Order order) {
   order.id = next_order_id_++;
   const uint64 order_id = order.id;
