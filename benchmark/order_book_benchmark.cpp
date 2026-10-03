@@ -4,9 +4,9 @@
 #include <iostream>
 #include <vector>
 
-#include "../matching/limit_order_book.cpp"
-#include "../matching/limit_order_book.h"
-#include "../types.h"
+#include "../src/matching/limit_order_book.cpp"
+#include "../src/matching/limit_order_book.h"
+#include "../src/types.h"
 
 namespace benchmark {
 
