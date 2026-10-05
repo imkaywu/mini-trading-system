@@ -21,12 +21,27 @@ class MatchingEngine {
   // Stops the matching engine thread.
   void Stop();
 
+  // Submits an order to the matching engine.
+  // The caller does not access the order book directly.
+  void SubmitOrder(trading::Order order);
+
  private:
   void Run();
 
   matching::LimitOrderBook order_book_;
 
+  // Orders waiting to be processed by the matching thread.
+  std::queue<trading::Order> order_queue_;
+
+  // Protects |order_queue_|.
+  std::mutex queue_mutex_;
+
+  // Wakes the matching thread when an order arrives or when the engine is
+  // shutting down.
+  std::condition_variable queue_cv_;
+
   std::atomic<bool> running_{false};
+
   std::thread thread_;
 };
 
