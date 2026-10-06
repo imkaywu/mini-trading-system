@@ -7,6 +7,7 @@
 
 #include "../src/engine/mutex_matching_engine.cpp"
 #include "../src/engine/spsc_matching_engine.cpp"
+#include "../src/matching/limit_order_book.cpp"
 
 namespace benchmark {
 

@@ -3,8 +3,6 @@
 #include <thread>
 #include <utility>
 
-#include "../matching/limit_order_book.cpp"
-
 namespace engine {
 
 SpscMatchingEngine::SpscMatchingEngine(usize expected_order_count)

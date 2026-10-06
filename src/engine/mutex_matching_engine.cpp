@@ -2,8 +2,6 @@
 
 #include <stdexcept>
 
-#include "../matching/limit_order_book.cpp"
-
 namespace engine {
 
 MutexMatchingEngine::MutexMatchingEngine(usize expected_order_count)

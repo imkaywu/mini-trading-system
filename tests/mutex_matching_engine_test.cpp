@@ -1,7 +1,9 @@
+#include "../src/engine/mutex_matching_engine.cpp"
+
 #include <chrono>
 #include <thread>
 
-#include "../src/engine/mutex_matching_engine.cpp"
+#include "../src/matching/limit_order_book.cpp"
 
 int main() {
   engine::MutexMatchingEngine matching_engine(100000);

@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "../src/matching/limit_order_book.cpp"
-#include "../src/matching/limit_order_book.h"
 #include "../src/types.h"
 
 namespace benchmark {
