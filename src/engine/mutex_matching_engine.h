@@ -9,11 +9,11 @@
 
 namespace engine {
 
-class MatchingEngine {
+class MutexMatchingEngine {
  public:
-  explicit MatchingEngine(usize expected_order_count = 0);
+  explicit MutexMatchingEngine(usize expected_order_count = 0);
 
-  ~MatchingEngine();
+  ~MutexMatchingEngine();
 
   // Starts the dedicated matching engine thread.
   void Start();
@@ -23,7 +23,9 @@ class MatchingEngine {
 
   // Submits an order to the matching engine.
   // The caller does not access the order book directly.
-  void SubmitOrder(trading::Order order);
+  bool32 SubmitOrder(trading::Order order);
+
+  usize ProcessedCount() const;
 
  private:
   void Run();
@@ -40,7 +42,10 @@ class MatchingEngine {
   // shutting down.
   std::condition_variable queue_cv_;
 
-  std::atomic<bool> running_{false};
+  std::atomic<bool32> running_{false};
+
+  // Incremented by the matching thread after an order has been processed.
+  std::atomic<usize> processed_count_{0};
 
   std::thread thread_;
 };

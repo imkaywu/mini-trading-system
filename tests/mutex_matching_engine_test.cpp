@@ -1,10 +1,10 @@
-#include "../src/engine/matching_engine.cpp"
-
 #include <chrono>
 #include <thread>
 
+#include "../src/engine/mutex_matching_engine.cpp"
+
 int main() {
-  engine::MatchingEngine matching_engine(100000);
+  engine::MutexMatchingEngine matching_engine(100000);
 
   matching_engine.Start();
 

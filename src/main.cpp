@@ -1,10 +1,10 @@
 #include <chrono>
 #include <thread>
 
-#include "engine/matching_engine.cpp"
+#include "engine/spsc_matching_engine.cpp"
 
 int main() {
-  engine::MatchingEngine matching_engine(100000);
+  engine::SpscMatchingEngine matching_engine(100000);
 
   matching_engine.Start();
 

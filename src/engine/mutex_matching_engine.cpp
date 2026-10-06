@@ -1,4 +1,4 @@
-#include "matching_engine.h"
+#include "mutex_matching_engine.h"
 
 #include <stdexcept>
 
@@ -6,21 +6,21 @@
 
 namespace engine {
 
-MatchingEngine::MatchingEngine(usize expected_order_count)
+MutexMatchingEngine::MutexMatchingEngine(usize expected_order_count)
     : order_book_(expected_order_count) {}
 
-MatchingEngine::~MatchingEngine() { Stop(); }
+MutexMatchingEngine::~MutexMatchingEngine() { Stop(); }
 
-void MatchingEngine::Start() {
+void MutexMatchingEngine::Start() {
   if (running_) {
     return;
   }
 
   running_ = true;
-  thread_ = std::thread(&MatchingEngine::Run, this);
+  thread_ = std::thread(&MutexMatchingEngine::Run, this);
 }
 
-void MatchingEngine::Stop() {
+void MutexMatchingEngine::Stop() {
   if (!running_) {
     return;
   }
@@ -35,7 +35,7 @@ void MatchingEngine::Stop() {
   }
 }
 
-void MatchingEngine::SubmitOrder(trading::Order order) {
+bool32 MutexMatchingEngine::SubmitOrder(trading::Order order) {
   {
     std::lock_guard<std::mutex> lock(queue_mutex_);
 
@@ -44,9 +44,15 @@ void MatchingEngine::SubmitOrder(trading::Order order) {
 
   // Notify after releasing the mutex.
   queue_cv_.notify_one();
+
+  return true;
 }
 
-void MatchingEngine::Run() {
+usize MutexMatchingEngine::ProcessedCount() const {
+  return processed_count_.load(std::memory_order_acquire);
+}
+
+void MutexMatchingEngine::Run() {
   while (true) {
     trading::Order order;
 
@@ -70,6 +76,8 @@ void MatchingEngine::Run() {
     // other producers should be able to submit orders while the matching engine
     // is processing the current order.
     order_book_.AddOrder(std::move(order));
+
+    processed_count_.fetch_add(1, std::memory_order_release);
   }
 }
 

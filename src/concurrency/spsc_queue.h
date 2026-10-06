@@ -24,7 +24,7 @@ class SpscQueue {
   static_assert(Capacity > 0);
 
  public:
-  bool push(T value) {
+  bool32 push(T value) {
     // The producer is the only thread that modifies |write_index_|, so it
     // doesn't need synchronization to read its own index.
     const auto write_index = write_index_.load(std::memory_order_relaxed);
@@ -62,7 +62,7 @@ class SpscQueue {
     return true;
   }
 
-  bool pop(T& value) {
+  bool32 pop(T& value) {
     // The consumer is the only thread that modifies |read_index_|, so it
     // doesn't need synchronization to read its own index.
     const auto read_index = read_index_.load(std::memory_order_relaxed);
