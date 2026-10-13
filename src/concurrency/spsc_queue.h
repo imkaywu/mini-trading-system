@@ -12,8 +12,8 @@ namespace concurrency {
 // Single-producer / single-consumer queue.
 //
 // Contract:
-//   - Exactly one thread may call push().
-//   - Exactly one different thread may call pop().
+//   - Exactly one thread may call Push().
+//   - Exactly one different thread may call Pop().
 //   - The producer owns write_index_.
 //   - The consumer owns read_index_.
 //
@@ -24,12 +24,12 @@ class SpscQueue {
   static_assert(Capacity > 0);
 
  public:
-  bool32 push(T value) {
+  bool32 Push(T value) {
     // The producer is the only thread that modifies |write_index_|, so it
     // doesn't need synchronization to read its own index.
     const auto write_index = write_index_.load(std::memory_order_relaxed);
 
-    const auto next_write_index = increment(write_index);
+    const auto next_write_index = Increment(write_index);
 
     // We need to observe the consumer's latest read position to determine
     // whether a slot has become available.
@@ -62,7 +62,7 @@ class SpscQueue {
     return true;
   }
 
-  bool32 pop(T& value) {
+  bool32 Pop(T& value) {
     // The consumer is the only thread that modifies |read_index_|, so it
     // doesn't need synchronization to read its own index.
     const auto read_index = read_index_.load(std::memory_order_relaxed);
@@ -85,13 +85,13 @@ class SpscQueue {
     //
     // The producer's acquire load of |read_index_| guarantees that it sees this
     // updated position.
-    read_index_.store(increment(read_index), std::memory_order_release);
+    read_index_.store(Increment(read_index), std::memory_order_release);
 
     return true;
   }
 
  private:
-  static constexpr usize increment(usize index) {
+  static constexpr usize Increment(usize index) {
     return (index + 1) % Capacity;
   }
 

@@ -33,7 +33,7 @@ void SpscMatchingEngine::Stop() {
 }
 
 bool32 SpscMatchingEngine::SubmitOrder(trading::Order order) {
-  return order_queue_.push(std::move(order));
+  return order_queue_.Push(std::move(order));
 }
 
 usize SpscMatchingEngine::ProcessedCount() const {
@@ -44,7 +44,7 @@ void SpscMatchingEngine::Run() {
   while (running_) {
     trading::Order order;
 
-    if (order_queue_.pop(order)) {
+    if (order_queue_.Pop(order)) {
       order_book_.AddOrder(std::move(order));
 
       processed_count_.fetch_add(1, std::memory_order_release);
@@ -58,7 +58,7 @@ void SpscMatchingEngine::Run() {
 
   // Drain orders that were queued before shutdown.
   trading::Order order;
-  while (order_queue_.pop(order)) {
+  while (order_queue_.Pop(order)) {
     order_book_.AddOrder(std::move(order));
 
     processed_count_.fetch_add(1, std::memory_order_release);
