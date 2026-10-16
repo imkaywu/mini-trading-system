@@ -176,7 +176,7 @@ No CMake or Makefiles are required.
 ./build/main
 ```
 
-### Correctness Tests
+### Tests
 
 Each test entry point is compiled into a standalone executable.
 
