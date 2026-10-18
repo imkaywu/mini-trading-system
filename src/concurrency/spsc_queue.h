@@ -18,10 +18,11 @@ namespace concurrency {
 //   - The consumer owns read_index_.
 //
 // Violating this contract is a programming error.
-
+//
+// Usable capacity = Capacity - 1.
 template <typename T, usize Capacity>
 class SpscQueue {
-  static_assert(Capacity > 0);
+  static_assert(Capacity > 1);
 
  public:
   bool32 Push(T value) {
@@ -124,10 +125,10 @@ class SpscQueue {
    * Consumer sees Order
    */
   // Only the producer writes |write_index_|. The consumer reads it.
-  std::atomic<int> write_index_;
+  std::atomic<int> write_index_{0};
 
   // Only the consumer writes |read_index_|. The producer reads it.
-  std::atomic<int> read_index_;
+  std::atomic<int> read_index_{0};
 };
 
 }  // namespace concurrency

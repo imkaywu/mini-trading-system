@@ -5,34 +5,52 @@
 
 namespace engine {
 
-SpscMatchingEngine::SpscMatchingEngine(usize expected_order_count)
-    : order_book_(expected_order_count) {}
+SpscMatchingEngine::SpscMatchingEngine(usize expected_order_count,
+                                       TradeCallback trade_callback)
+    : order_book_(expected_order_count),
+      trade_callback_(std::move(trade_callback)) {}
 
 SpscMatchingEngine::~SpscMatchingEngine() { Stop(); }
 
 void SpscMatchingEngine::Start() {
-  if (running_) {
+  if (started_) {
     return;
   }
 
-  running_ = true;
+  started_ = true;
+  running_.store(true, std::memory_order_release);
 
-  thread_ = std::thread(&SpscMatchingEngine::Run, this);
+  matching_thread_ = std::thread(&SpscMatchingEngine::Run, this);
+
+  trade_consumer_thread_ =
+      std::thread(&SpscMatchingEngine::RunTradeConsumer, this);
 }
 
 void SpscMatchingEngine::Stop() {
-  if (!running_) {
+  if (!started_) {
     return;
   }
 
-  running_ = false;
+  running_.store(false, std::memory_order_release);
 
-  if (thread_.joinable()) {
-    thread_.join();
+  // Matching thread drains accepted orders and publishes their trades.
+  if (matching_thread_.joinable()) {
+    matching_thread_.join();
   }
+
+  // Trade consumer must remain alive until matching is finished.
+  if (trade_consumer_thread_.joinable()) {
+    trade_consumer_thread_.join();
+  }
+
+  started_ = false;
 }
 
 bool32 SpscMatchingEngine::SubmitOrder(trading::Order order) {
+  if (!running_.load(std::memory_order_acquire)) {
+    return false;
+  }
+
   return order_queue_.Push(std::move(order));
 }
 
@@ -40,14 +58,32 @@ usize SpscMatchingEngine::ProcessedCount() const {
   return processed_count_.load(std::memory_order_acquire);
 }
 
+usize SpscMatchingEngine::ConsumedTradeCount() const {
+  return consumed_trade_count_.load(std::memory_order_acquire);
+}
+
+// ------------------------------------------------------------
+// Matching thread
+// ------------------------------------------------------------
+
+void SpscMatchingEngine::ProcessOrder(trading::Order order) {
+  auto trades = order_book_.AddOrder(std::move(order));
+
+  for (const trading::Trade& trade : trades) {
+    while (!trade_queue_.Push(trade)) {
+      std::this_thread::yield();
+    }
+  }
+
+  processed_count_.fetch_add(1, std::memory_order_release);
+}
+
 void SpscMatchingEngine::Run() {
-  while (running_) {
-    trading::Order order;
+  trading::Order order;
 
+  while (running_.load(std::memory_order_acquire)) {
     if (order_queue_.Pop(order)) {
-      order_book_.AddOrder(std::move(order));
-
-      processed_count_.fetch_add(1, std::memory_order_release);
+      ProcessOrder(order);
 
       continue;
     }
@@ -57,11 +93,38 @@ void SpscMatchingEngine::Run() {
   }
 
   // Drain orders that were queued before shutdown.
-  trading::Order order;
   while (order_queue_.Pop(order)) {
-    order_book_.AddOrder(std::move(order));
+    ProcessOrder(std::move(order));
+  }
 
-    processed_count_.fetch_add(1, std::memory_order_release);
+  matching_done_.store(true, std::memory_order_release);
+}
+
+// ------------------------------------------------------------
+// Trade consumer thread
+// ------------------------------------------------------------
+
+void SpscMatchingEngine::RunTradeConsumer() {
+  trading::Trade trade{};
+
+  while (true) {
+    if (trade_queue_.Pop(trade)) {
+      // Application-defined trade processing.
+      // Callback must NOT throw or call Stop().
+      if (trade_callback_) {
+        trade_callback_(trade);
+      }
+
+      consumed_trade_count_.fetch_add(1, std::memory_order_release);
+
+      continue;
+    }
+
+    if (matching_done_.load(std::memory_order_acquire)) {
+      break;
+    }
+
+    std::this_thread::yield();
   }
 }
 
