@@ -96,6 +96,8 @@ class SpscQueue {
     return (index + 1) % Capacity;
   }
 
+  static constexpr usize CacheLineSize = 64;
+
   std::array<T, Capacity> buffer_{};
 
   /*
@@ -125,10 +127,10 @@ class SpscQueue {
    * Consumer sees Order
    */
   // Only the producer writes |write_index_|. The consumer reads it.
-  std::atomic<int> write_index_{0};
+  alignas(CacheLineSize) std::atomic<int> write_index_{0};
 
   // Only the consumer writes |read_index_|. The producer reads it.
-  std::atomic<int> read_index_{0};
+  alignas(CacheLineSize) std::atomic<int> read_index_{0};
 };
 
 }  // namespace concurrency
