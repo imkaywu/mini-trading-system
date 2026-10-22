@@ -1,34 +1,40 @@
-
 # Mini Trading System
 
-An ongoing, from-scratch C++ project exploring low-latency trading infrastructure, with a focus on order matching, concurrency, memory efficiency, and performance benchmarking.
+An ongoing, from-scratch C++ project exploring low-latency trading infrastructure.
 
 The current implementation centers on a **limit order book** and **matching engine**, with ongoing expansion into other aspects of trading infrastructure. The long-term goal is to build an end-to-end simulated trading system.
 
 ## Project Status & Roadmap
 
-### Phase 1: Order Matching
-- [x] Basic single-threaded limit order book
+### 1. Limit Order Book
+- [x] Basic price-time priority matching
 - [x] Order IDs and cancellation
 - [x] Partial fills and timestamps
 - [x] Correctness tests
+- [x] Memory allocation profiling and optimization
 
-### Phase 2: Performance & Concurrency
-- [x] Memory allocation profiling
-- [x] Reserved-capacity comparison
-- [x] Separate correctness tests and benchmarks
-- [x] Mutex + condition variable matching engine
-- [x] Bounded SPSC matching engine
-- [x] Initial concurrency benchmarks
+### 2. Matching Engine & Concurrency
+- [x] Single-threaded matching engine
+- [x] Mutex + condition variable implementation
+- [x] Lock-free SPSC ring buffer implementation
+- [x] Concurrency benchmarks
 - [ ] Queue-only benchmarking and capacity analysis
-- [ ] Additional concurrency and trade-output benchmarking
+- [ ] Additional trade-output benchmarking
 
-### Phase 3: Trading Infrastructure
-- [ ] Recovery and market-data output
+### 3. Recovery & Market Data Output
+- [ ] State persistence and recovery
+- [ ] Order and trade event publication
+
+### 4. Market Data Pipeline
 - [ ] Market-data simulator
 - [ ] Feed handler
-- [ ] Strategy and risk engine
-- [ ] Order management system
+- [ ] SPSC event pipeline
+- [ ] Market-state reconstruction
+
+### 5. Strategy & Execution
+- [ ] Strategy
+- [ ] Risk engine
+- [ ] Order management system (OMS)
 - [ ] Exchange simulator
 
 ## Architecture
@@ -127,41 +133,6 @@ The existing implementation focuses on the order-matching subsystem, supporting 
 ```
 
 Both concurrency variants share the underlying order-book implementation, allowing their performance to be compared under equivalent workloads.
-
-## Technical Highlights
-
-### Limit Order Book
-
-- Price-time priority matching.
-- Order identification and cancellation.
-- Full and partial order execution.
-- Order timestamps.
-- Resting-order management.
-
-### Matching Engine & Concurrency
-
-Two execution variants have been implemented:
-
-| Variant | Mechanism | Purpose |
-| --- | --- | --- |
-| Mutex + Condition Variable | Lock-based producer-consumer synchronization | Baseline implementation |
-| SPSC Ring Buffer | Bounded, lock-free producer-consumer queue | Explore reduced synchronization overhead |
-
-The SPSC implementation assumes exactly one producer and one consumer.
-
-The consumer exclusively owns order-book mutation, avoiding concurrent modifications to the underlying book.
-
-### Performance Benchmarking
-
-Benchmarks examine:
-
-- Order-processing throughput and latency.
-- Dynamic memory allocation behavior.
-- Reserved versus unreserved container capacity.
-- Mutex/condition-variable versus SPSC concurrency.
-- Producer submission time versus total processing time.
-
-Measurements distinguish submission throughput from end-to-end throughput, since faster submission does not necessarily imply faster overall processing.
 
 ## Build and Run
 
