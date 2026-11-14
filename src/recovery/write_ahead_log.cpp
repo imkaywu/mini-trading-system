@@ -4,7 +4,10 @@
 #include <filesystem>
 #include <vector>
 
+#include "binary_utils.h"
+
 namespace recovery {
+
 namespace {
 
 constexpr uint32 Magic = 0x314C4157;  // "WAL1" in little-endian.
@@ -13,71 +16,6 @@ constexpr usize HeaderSize = 24;
 
 constexpr usize AddOrderPayloadSize = 17;
 constexpr usize CancelOrderPayloadSize = 8;
-
-using Bytes = std::vector<uint8>;
-
-void WriteU16(Bytes& bytes, uint16 value) {
-  for (usize i = 0; i < 2; ++i) {
-    bytes.push_back(static_cast<uint8>(value >> (i * 8)));
-  }
-}
-
-void WriteU32(Bytes& bytes, uint32 value) {
-  for (usize i = 0; i < 4; ++i) {
-    bytes.push_back(static_cast<uint8>(value >> (i * 8)));
-  }
-}
-
-void WriteU64(Bytes& bytes, uint64 value) {
-  for (usize i = 0; i < 8; ++i) {
-    bytes.push_back(static_cast<uint8>(value >> (i * 8)));
-  }
-}
-
-uint16 ReadU16(const uint8* data) {
-  uint16 value = 0;
-
-  for (usize i = 0; i < 2; ++i) {
-    value |= static_cast<uint16>(data[i]) << (i * 8);
-  }
-
-  return value;
-}
-
-uint32 ReadU32(const uint8* data) {
-  uint32 value = 0;
-
-  for (usize i = 0; i < 4; ++i) {
-    value |= static_cast<uint32>(data[i]) << (i * 8);
-  }
-
-  return value;
-}
-
-uint64 ReadU64(const uint8* data) {
-  uint64 value = 0;
-
-  for (usize i = 0; i < 8; ++i) {
-    value |= static_cast<uint64>(data[i]) << (i * 8);
-  }
-
-  return value;
-}
-
-uint32 CalculateCrc32(const uint8* data, usize size) {
-  uint32 crc = 0xFFFFFFFF;
-
-  for (usize i = 0; i < size; ++i) {
-    crc ^= data[i];
-
-    for (int bit = 0; bit < 8; ++bit) {
-      const uint32 mask = -(crc & 1);
-      crc = (crc >> 1) ^ (0xEDB88320 & mask);
-    }
-  }
-
-  return ~crc;
-}
 
 bool32 ReadExact(std::ifstream& file, uint8* data, usize size) {
   file.read(reinterpret_cast<char*>(data), static_cast<std::streamsize>(size));
@@ -164,32 +102,34 @@ bool32 WalWriter::Append(const WalEvent& event) {
     return false;
   }
 
-  Bytes payload;
+  binary::Bytes payload;
 
   if (event.type == WalEventType::AddOrder) {
     payload.push_back(static_cast<uint8>(event.side));
-    WriteU64(payload, static_cast<uint64>(event.price));
-    WriteU64(payload, static_cast<uint64>(event.quantity));
+    binary::WriteU64(payload, static_cast<uint64>(event.price));
+    binary::WriteU64(payload, static_cast<uint64>(event.quantity));
   } else if (event.type == WalEventType::CancelOrder) {
-    WriteU64(payload, event.order_id);
+    binary::WriteU64(payload, event.order_id);
   } else {
     return false;
   }
 
-  Bytes record;
+  binary::Bytes record;
 
-  WriteU32(record, Magic);
-  WriteU16(record, Version);
-  WriteU16(record, static_cast<uint16>(event.type));
-  WriteU64(record, next_sequence_number_);
-  WriteU32(record, static_cast<uint32>(payload.size()));
+  binary::WriteU32(record, Magic);
+  binary::WriteU16(record, Version);
+  binary::WriteU16(record, static_cast<uint16>(event.type));
+  binary::WriteU64(record, next_sequence_number_);
+  binary::WriteU32(record, static_cast<uint32>(payload.size()));
 
   // Checksum covers version through payload, excluding magic and
   // the checksum field itself.
-  Bytes checksum_data(record.begin() + 4, record.end());
+  binary::Bytes checksum_data(record.begin() + 4, record.end());
   checksum_data.insert(checksum_data.end(), payload.begin(), payload.end());
 
-  WriteU32(record, CalculateCrc32(checksum_data.data(), checksum_data.size()));
+  binary::WriteU32(
+      record,
+      binary::CalculateCrc32(checksum_data.data(), checksum_data.size()));
 
   record.insert(record.end(), payload.begin(), payload.end());
 
@@ -245,12 +185,12 @@ WalReadResult WalReader::ReadNext(WalEvent& event) {
     return WalReadResult::Error;
   }
 
-  const uint32 magic = ReadU32(header.data());
-  const uint16 version = ReadU16(header.data() + 4);
-  const uint16 event_type = ReadU16(header.data() + 6);
-  const uint64 sequence_number = ReadU64(header.data() + 8);
-  const uint32 payload_size = ReadU32(header.data() + 16);
-  const uint32 checksum = ReadU32(header.data() + 20);
+  const uint32 magic = binary::ReadU32(header.data());
+  const uint16 version = binary::ReadU16(header.data() + 4);
+  const uint16 event_type = binary::ReadU16(header.data() + 6);
+  const uint64 sequence_number = binary::ReadU64(header.data() + 8);
+  const uint32 payload_size = binary::ReadU32(header.data() + 16);
+  const uint32 checksum = binary::ReadU32(header.data() + 20);
 
   if (magic != Magic || version != Version) {
     return WalReadResult::Error;
@@ -275,16 +215,17 @@ WalReadResult WalReader::ReadNext(WalEvent& event) {
     return WalReadResult::Error;
   }
 
-  Bytes payload(payload_size);
+  binary::Bytes payload(payload_size);
 
   if (!ReadExact(file_, payload.data(), payload.size())) {
     return WalReadResult::Error;
   }
 
-  Bytes checksum_data(header.begin() + 4, header.begin() + 20);
+  binary::Bytes checksum_data(header.begin() + 4, header.begin() + 20);
   checksum_data.insert(checksum_data.end(), payload.begin(), payload.end());
 
-  if (CalculateCrc32(checksum_data.data(), checksum_data.size()) != checksum) {
+  if (binary::CalculateCrc32(checksum_data.data(), checksum_data.size()) !=
+      checksum) {
     return WalReadResult::Error;
   }
 
@@ -298,10 +239,10 @@ WalReadResult WalReader::ReadNext(WalEvent& event) {
     }
 
     event.side = static_cast<trading::Side>(payload[0]);
-    event.price = static_cast<int64>(ReadU64(payload.data() + 1));
-    event.quantity = static_cast<int64>(ReadU64(payload.data() + 9));
+    event.price = static_cast<int64>(binary::ReadU64(payload.data() + 1));
+    event.quantity = static_cast<int64>(binary::ReadU64(payload.data() + 9));
   } else {
-    event.order_id = ReadU64(payload.data());
+    event.order_id = binary::ReadU64(payload.data());
   }
 
   ++expected_sequence_number_;

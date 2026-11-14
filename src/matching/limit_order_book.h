@@ -3,12 +3,19 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <unordered_map>
+#include <vector>
 
 #include "../trading/order.h"
 #include "../trading/trade.h"
 #include "../types.h"
 
 namespace matching {
+
+struct LimitOrderBookSnapshot {
+  uint64 next_order_id = 1;
+  std::vector<trading::Order> orders;
+};
 
 class LimitOrderBook {
  public:
@@ -23,6 +30,13 @@ class LimitOrderBook {
   // Removes an existing order.
   // Returns false if order ID does not exist.
   bool32 CancelOrder(uint64 order_id);
+
+  // Exports the current resting orders and next order ID.
+  LimitOrderBookSnapshot ExportSnapshot() const;
+
+  // Reconstructs the book from snapshot.
+  // Returns false if the snapshot state is invalid.
+  bool32 RestoreSnapshot(const LimitOrderBookSnapshot& snapshot);
 
   void Print() const;
 
