@@ -8,7 +8,8 @@ namespace recovery {
 
 bool32 ReplayWal(const std::string& path,
                  matching::LimitOrderBook& order_book,
-                 WalReplayStats& stats) {
+                 WalReplayStats& stats,
+                 uint64 after_sequence_number) {
   stats = {};
 
   WalReader reader;
@@ -17,19 +18,26 @@ bool32 ReplayWal(const std::string& path,
     return false;
   }
 
+  uint64 last_sequence_number = 0;
   WalEvent event{};
 
   while (true) {
     const WalReadResult result = reader.ReadNext(event);
 
     if (result == WalReadResult::End) {
-      reader.Close();
-      return true;
+      break;
     }
 
     if (result == WalReadResult::Error) {
       reader.Close();
       return false;
+    }
+
+    last_sequence_number = event.sequence_number;
+
+    // This event is already included in the snapshot.
+    if (event.sequence_number <= after_sequence_number) {
+      continue;
     }
 
     ++stats.event_count;
@@ -57,6 +65,15 @@ bool32 ReplayWal(const std::string& path,
       return false;
     }
   }
+
+  reader.Close();
+
+  // The snapshot refers to an event that doesn't exist in the WAL.
+  if (last_sequence_number < after_sequence_number) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace recovery

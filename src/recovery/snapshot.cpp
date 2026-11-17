@@ -15,10 +15,22 @@ namespace recovery {
 namespace {
 
 constexpr std::array<uint8, 4> Magic = {'S', 'N', 'P', '1'};
-constexpr uint16 Version = 1;
+constexpr uint16 Version = 2;
+// Header:
+//   Magic          4 bytes
+//   Version        2 bytes
+//   Reserved       2 bytes
+//   Payload size   8 bytes
+//   CRC32          4 bytes
+constexpr usize Reserved = 0;
 constexpr usize HeaderSize = 20;
+// Payload:
+//   Next order ID        8 bytes
+//   Last WAL sequence    8 bytes
+//   Order count          8 bytes
+//   Orders               25 bytes each
 constexpr usize OrderSize = 25;
-constexpr usize PayloadPrefixSize = 16;
+constexpr usize PayloadPrefixSize = 24;
 
 bool32 ReadExact(std::ifstream& file, uint8* data, usize size) {
   file.read(reinterpret_cast<char*>(data), static_cast<std::streamsize>(size));
@@ -26,16 +38,24 @@ bool32 ReadExact(std::ifstream& file, uint8* data, usize size) {
   return file.gcount() == static_cast<std::streamsize>(size);
 }
 
+bool32 IsValidSide(uint8 side) {
+  return side == static_cast<uint8>(trading::Side::Buy) ||
+         side == static_cast<uint8>(trading::Side::Sell);
+}
+
 }  // namespace
 
 bool32 WriteSnapshot(const std::string& path,
-                     const matching::LimitOrderBook& order_book) {
+                     const matching::LimitOrderBook& order_book,
+                     uint64 last_sequence_number) {
   const matching::LimitOrderBookSnapshot snapshot = order_book.ExportSnapshot();
 
   binary::Bytes payload;
+  payload.reserve(PayloadPrefixSize + snapshot.orders.size() * OrderSize);
 
   binary::WriteU64(payload, snapshot.next_order_id);
-  binary::WriteU64(payload, snapshot.orders.size());
+  binary::WriteU64(payload, last_sequence_number);
+  binary::WriteU64(payload, static_cast<uint64>(snapshot.orders.size()));
 
   for (const auto& order : snapshot.orders) {
     binary::WriteU64(payload, order.id);
@@ -45,10 +65,11 @@ bool32 WriteSnapshot(const std::string& path,
   }
 
   binary::Bytes record;
+  record.reserve(HeaderSize + payload.size());
 
   record.insert(record.end(), Magic.begin(), Magic.end());
   binary::WriteU16(record, Version);
-  binary::WriteU16(record, 0);  // Reserved.
+  binary::WriteU16(record, Reserved);
   binary::WriteU64(record, payload.size());
 
   binary::Bytes checksum_data(record.begin() + 4, record.end());
@@ -76,7 +97,8 @@ bool32 WriteSnapshot(const std::string& path,
 }
 
 bool32 ReadSnapshot(const std::string& path,
-                    matching::LimitOrderBook& order_book) {
+                    matching::LimitOrderBook& order_book,
+                    uint64& last_sequence_number) {
   std::ifstream file(path, std::ios::binary);
 
   if (!file.is_open()) {
@@ -98,7 +120,7 @@ bool32 ReadSnapshot(const std::string& path,
   const uint64 payload_size = binary::ReadU64(header.data() + 8);
   const uint32 checksum = binary::ReadU32(header.data() + 16);
 
-  if (version != Version || reserved != 0) {
+  if (version != Version || reserved != Reserved) {
     return false;
   }
 
@@ -118,7 +140,8 @@ bool32 ReadSnapshot(const std::string& path,
   }
 
   const uint64 next_order_id = binary::ReadU64(prefix.data());
-  const uint64 order_count = binary::ReadU64(prefix.data() + 8);
+  const uint64 snapshot_sequence = binary::ReadU64(prefix.data() + 8);
+  const uint64 order_count = binary::ReadU64(prefix.data() + 16);
 
   if (order_count >
       (std::numeric_limits<uint64>::max() - PayloadPrefixSize) / OrderSize) {
@@ -132,12 +155,13 @@ bool32 ReadSnapshot(const std::string& path,
     return false;
   }
 
-  binary::Bytes payload(prefix.begin(), prefix.end());
+  binary::Bytes payload;
+  payload.reserve(payload_size);
+
+  payload.insert(payload.end(), prefix.begin(), prefix.end());
 
   const usize remaining_size =
       static_cast<usize>(payload_size - PayloadPrefixSize);
-
-  payload.resize(static_cast<usize>(payload_size));
 
   if (!ReadExact(file, payload.data() + PayloadPrefixSize, remaining_size)) {
     return false;
@@ -174,7 +198,7 @@ bool32 ReadSnapshot(const std::string& path,
     const uint8 side = payload[offset];
     offset += 1;
 
-    if (side > static_cast<uint8>(trading::Side::Sell)) {
+    if (!IsValidSide(side)) {
       return false;
     }
 
@@ -190,7 +214,13 @@ bool32 ReadSnapshot(const std::string& path,
     snapshot.orders.push_back(std::move(order));
   }
 
-  return order_book.RestoreSnapshot(snapshot);
+  if (!order_book.RestoreSnapshot(snapshot)) {
+    return false;
+  }
+
+  last_sequence_number = snapshot_sequence;
+
+  return true;
 }
 
 }  // namespace recovery

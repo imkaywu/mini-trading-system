@@ -24,6 +24,7 @@ struct WalReplayStats {
 
 bool32 ReplayWal(const std::string& path,
                  matching::LimitOrderBook& order_book,
-                 WalReplayStats& stats);
+                 WalReplayStats& stats,
+                 uint64 after_sequence_number = 0);
 
 }  // namespace recovery

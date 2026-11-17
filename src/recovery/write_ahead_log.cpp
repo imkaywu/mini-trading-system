@@ -12,6 +12,13 @@ namespace {
 
 constexpr uint32 Magic = 0x314C4157;  // "WAL1" in little-endian.
 constexpr uint16 Version = 1;
+// Header
+//   Magic                  4 bytes
+//   Version                2 bytes
+//   Event type             2 bytes
+//   Next sequence number   8 bytes
+//   Payload size           4 bytes
+//   CRC32                  4 bytes
 constexpr usize HeaderSize = 24;
 
 constexpr usize AddOrderPayloadSize = 17;
@@ -21,6 +28,11 @@ bool32 ReadExact(std::ifstream& file, uint8* data, usize size) {
   file.read(reinterpret_cast<char*>(data), static_cast<std::streamsize>(size));
 
   return file.gcount() == static_cast<std::streamsize>(size);
+}
+
+bool32 IsValidSide(uint8 side) {
+  return side == static_cast<uint8>(trading::Side::Buy) ||
+         side == static_cast<uint8>(trading::Side::Sell);
 }
 
 }  // namespace
@@ -234,7 +246,7 @@ WalReadResult WalReader::ReadNext(WalEvent& event) {
   event.type = type;
 
   if (type == WalEventType::AddOrder) {
-    if (payload[0] > static_cast<uint8>(trading::Side::Sell)) {
+    if (!IsValidSide(payload[0])) {
       return WalReadResult::Error;
     }
 
