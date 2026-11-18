@@ -12,7 +12,7 @@
 
 namespace recovery {
 
-namespace {
+namespace snapshot_detail {
 
 constexpr std::array<uint8, 4> Magic = {'S', 'N', 'P', '1'};
 constexpr uint16 Version = 2;
@@ -43,11 +43,13 @@ bool32 IsValidSide(uint8 side) {
          side == static_cast<uint8>(trading::Side::Sell);
 }
 
-}  // namespace
+}  // namespace snapshot_detail
 
 bool32 WriteSnapshot(const std::string& path,
                      const matching::LimitOrderBook& order_book,
                      uint64 last_sequence_number) {
+  using namespace snapshot_detail;
+
   const matching::LimitOrderBookSnapshot snapshot = order_book.ExportSnapshot();
 
   binary::Bytes payload;
@@ -99,6 +101,8 @@ bool32 WriteSnapshot(const std::string& path,
 bool32 ReadSnapshot(const std::string& path,
                     matching::LimitOrderBook& order_book,
                     uint64& last_sequence_number) {
+  using namespace snapshot_detail;
+
   std::ifstream file(path, std::ios::binary);
 
   if (!file.is_open()) {

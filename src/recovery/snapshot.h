@@ -9,19 +9,13 @@ namespace recovery {
 
 // Writes a complete order-book snapshot, replacing any existing file.
 bool32 WriteSnapshot(const std::string& path,
-                     const matching::LimitOrderBook& order_book);
-
-bool32 WriteSnapshot(const std::string& path,
                      const matching::LimitOrderBook& order_book,
                      uint64 last_sequence_number);
 
 // Loads a snapshot and restores the order book.
 // Returns false if the file is invalid or cannot be read.
 bool32 ReadSnapshot(const std::string& path,
-                    matching::LimitOrderBook& order_book);
-
-bool32 ReadSnapshot(const std::string& path,
                     matching::LimitOrderBook& order_book,
-                    uint64 last_sequence_number);
+                    uint64& last_sequence_number);
 
 }  // namespace recovery

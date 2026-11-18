@@ -44,11 +44,13 @@ void TestSnapshotRestore() {
   assert(trades[1].quantity == 2);
 
   // Order 2 should have 3 remaining.
-  assert(recovery::WriteSnapshot(path, original_book));
+  assert(recovery::WriteSnapshot(path, original_book, 0));
 
   matching::LimitOrderBook restored_book;
 
-  assert(recovery::ReadSnapshot(path, restored_book));
+  uint64 last_sequence_number = 0;
+  assert(recovery::ReadSnapshot(path, restored_book, last_sequence_number));
+  assert(last_sequence_number == 0);
 
   // The next order should receive ID 4.
   // It should match the remaining quantity of order 2.
@@ -99,11 +101,13 @@ void TestEmptyBookSnapshot() {
       .quantity = 5,
   });
 
-  assert(recovery::WriteSnapshot(path, original_book));
+  assert(recovery::WriteSnapshot(path, original_book, 0));
 
   matching::LimitOrderBook restored_book;
 
-  assert(recovery::ReadSnapshot(path, restored_book));
+  uint64 last_sequence_number = 0;
+  assert(recovery::ReadSnapshot(path, restored_book, last_sequence_number));
+  assert(last_sequence_number == 0);
 
   // The book is empty, but the next ID must still be 3.
   auto trades = restored_book.AddOrder({

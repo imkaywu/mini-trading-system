@@ -8,7 +8,7 @@
 
 namespace recovery {
 
-namespace {
+namespace wal_detail {
 
 constexpr uint32 Magic = 0x314C4157;  // "WAL1" in little-endian.
 constexpr uint16 Version = 1;
@@ -35,7 +35,7 @@ bool32 IsValidSide(uint8 side) {
          side == static_cast<uint8>(trading::Side::Sell);
 }
 
-}  // namespace
+}  // namespace wal_detail
 
 // ------------------------------------------------------------
 // WAL writer
@@ -110,6 +110,8 @@ bool32 WalWriter::AppendCancelOrder(uint64 order_id) {
 }
 
 bool32 WalWriter::Append(const WalEvent& event) {
+  using namespace wal_detail;
+
   if (!file_.is_open()) {
     return false;
   }
@@ -179,6 +181,8 @@ void WalReader::Close() {
 }
 
 WalReadResult WalReader::ReadNext(WalEvent& event) {
+  using namespace wal_detail;
+
   if (!file_.is_open()) {
     return WalReadResult::Error;
   }
