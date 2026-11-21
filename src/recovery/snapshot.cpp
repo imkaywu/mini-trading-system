@@ -159,10 +159,8 @@ bool32 ReadSnapshot(const std::string& path,
     return false;
   }
 
-  binary::Bytes payload;
-  payload.reserve(payload_size);
-
-  payload.insert(payload.end(), prefix.begin(), prefix.end());
+  binary::Bytes payload(static_cast<usize>(payload_size));
+  std::copy(prefix.begin(), prefix.end(), payload.begin());
 
   const usize remaining_size =
       static_cast<usize>(payload_size - PayloadPrefixSize);
